@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import './App.css'
 import { main, updateTransferAndRender, triggerRendering } from './scivis'
 import NodeEditor from './components/NodeEditor'
-// WebGL: INVALID_OPERATION: texImage3D: ArrayBufferView not big enough for request
+
 function App () {
   const [settings, setSettings] = useState({
     stepSize: 1000,
