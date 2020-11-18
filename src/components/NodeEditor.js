@@ -1,10 +1,14 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ChromePicker } from 'react-color'
 import styled from 'styled-components'
 import { v4 as uuidv4 } from 'uuid'
+import { updateTransferAndRender } from '../scivis'
+import { rgbObjToRgbString } from '../lib/utils'
 
 const Container = styled.div`
-
+  display: flex;
+  justify-content: center;
+  align-items: center;
 `
 
 const Editor = styled.svg`
@@ -21,7 +25,7 @@ const Editor = styled.svg`
   }
 `
 
-const createNode = (x = 0, y = 0, color = '#fff') => {
+const createNode = (x = 0, y = 0, color = { r: 202, g: 83, b: 83, a: 1 }) => {
   return {
     x: x,
     y: y,
@@ -38,6 +42,8 @@ const getRelativeCoordinates = (event) => {
   const y = event.clientY - rect.top - editorPadding
   return { x, y }
 }
+
+let initiated = false
 
 function NodeEditor ({ width = 300, height = 300 }) {
   const [nodes, setNodes] = useState([createNode(0, height), createNode(width, 0)])
@@ -66,7 +72,7 @@ function NodeEditor ({ width = 300, height = 300 }) {
 
   const mouseDown = (event) => {
     const coordinates = getRelativeCoordinates(event)
-    const newNode = createNode(coordinates.x, coordinates.y, 'green')
+    const newNode = createNode(coordinates.x, coordinates.y, { r: 0, g: 255, b: 0, a: 1 })
     setSelected(newNode.id)
     addNode(newNode)
     setCurrentlyMoving(newNode.id)
@@ -105,13 +111,28 @@ function NodeEditor ({ width = 300, height = 300 }) {
   const changeColor = (color) => {
     const newNodes = nodes.map((node) => {
       if (node.id === selected) {
-        node.color = color.hex
+        node.color = color.rgb
       }
       return node
     })
     setNodes(sortNodes([...newNodes]))
     setCurrentColor(color)
   }
+
+  useEffect(() => {
+    initiated = true
+  }, [])
+
+  useMemo(() => {
+    if (initiated) {
+      const mappedNodes = nodes.map(node => {
+        return { ...node, x: node.x / width, y: Math.abs(1 - node.y / height) }
+      })
+
+      // console.log(mappedNodes)
+      updateTransferAndRender(mappedNodes)
+    }
+  }, [nodes])
 
   return (
     <Container>
@@ -120,11 +141,17 @@ function NodeEditor ({ width = 300, height = 300 }) {
         <g transform={'translate(' + editorPadding + ' ' + editorPadding + ')'}>
           <text fontSize='12' fontWeight='bolder' x={0} y={0}>Piggy Editor</text>
           <polyline fill='none' strokeWidth={1} stroke='black' points={points.join(' ')} />
-          {nodes.map((node) => <circle onMouseDown={(e) => circleMouseDown(e, node)} key={node.id} cx={node.x} cy={node.y} fill={node.color} stroke={node.id === selected ? 'black' : 'none'} strokeWidth={2} r={8} />)}
+          {nodes.map((node) => <circle onMouseDown={(e) => circleMouseDown(e, node)} key={node.id} cx={node.x} cy={node.y} fill={rgbObjToRgbString(node.color)} stroke={node.id === selected ? 'black' : 'none'} strokeWidth={2} r={8} />)}
         </g>
       </Editor>
 
-      <p>Hello piggy</p>
+      {/* <button onClick={() => updateTransferAndRender(nodes.map(node => {
+        node.x = node.x / width
+        node.y = node.y / height
+        return node
+      }))}
+      >FOOO
+      </button> */}
 
       <ChromePicker color={currentColor} onChange={changeColor} />
     </Container>

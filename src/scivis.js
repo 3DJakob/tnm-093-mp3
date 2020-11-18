@@ -1,4 +1,6 @@
 import { mat4 } from 'gl-matrix'
+import interpolate from 'color-interpolate'
+import { rgbObjToRgbString, rgbStringToObj } from './lib/utils'
 
 //
 //   Space for some global variables
@@ -437,15 +439,66 @@ function createProgram (gl, vertexSource, fragmentSource) {
   return program
 }
 
-export function updateTransferAndRender () {
+let customTransferFunction = null
+
+export function updateTransferAndRender (customTransferFunctionIn) {
+  customTransferFunction = customTransferFunctionIn
   // console.log('foobar')
   const canvas = document.querySelector('#glCanvas')
   gl = canvas.getContext('webgl2')
   const transferFunctionTexture = gl.createTexture()
   gl.bindTexture(gl.TEXTURE_2D, transferFunctionTexture)
-  updateTransferFunction(gl, transferFunctionTexture)
+  // updateTransferFunction(gl, transferFunctionTexture, customTransferFunction)
   triggerTransferFunctionUpdate()
   // triggerRendering()
+}
+
+const precision = (num) => {
+  return Math.round(num * 100) / 100
+}
+
+const findPointOnTrasferFunction = (it, nodes) => {
+  // it = 0.5
+  // console.log(it)
+  // Dirty talk
+  let startNode = null
+  let endNode = null
+
+  let index = 0
+  while (!endNode) {
+    // console.log(index)
+    // console.log(nodes)
+
+    // console.log(nodes[index].x)
+    // console.log(precision(it)) // maybe precision?
+    if (nodes[index].x >= it) {
+      endNode = nodes[index]
+      startNode = nodes[index - 1] // makes sense
+    }
+
+    index++
+  }
+  const colormap = interpolate([rgbObjToRgbString(startNode.color), rgbObjToRgbString(endNode.color)])
+  const v = -Math.atan((endNode.y - startNode.y) / (endNode.x - startNode.x))
+  const dx = (it - startNode.x)
+  // cos(v) * dx = hypothenus
+  const hypothenus = dx / Math.sin(v) // WRONG
+  // sin(v) * dy = hypothenus
+  const dy = hypothenus * Math.sin(v)
+
+  const percent = hypothenus / Math.sqrt((Math.pow(endNode.x - startNode.x, 2) + Math.pow(endNode.y - startNode.y, 2)))
+
+  // console.log('dx: ' + dx)
+  // console.log('hypothenus: ' + hypothenus)
+  // console.log('Percent:' + percent)
+  const colorObj = rgbStringToObj(colormap(percent))
+
+  const opacity = (dy + startNode.y > 1) ? 1 : dy + startNode.y
+
+  colorObj.a = opacity
+  console.log(dy + startNode.y)
+
+  return colorObj
 }
 
 /// This function is called when the transfer function texture on the GPU should be
@@ -475,6 +528,7 @@ function updateTransferFunction (gl, transferFunction) {
   // the image.  The remainder of the ramp is just using different angles for the color
   // components
   const cutoff = 50
+  // console.log(customTransferFunction)
 
   for (let i = 0; i < cutoff * 4; i += 4) {
     // Set RGBA all to 0
@@ -482,6 +536,41 @@ function updateTransferFunction (gl, transferFunction) {
     data[i + 1] = 0
     data[i + 2] = 0
     data[i + 3] = 0
+  }
+
+  if (customTransferFunction) {
+    for (let i = cutoff * 4; i < 256 * 4; i += 4) {
+      // convert i into a value [0, 256] and set it
+      const it = (i / 4) / 255
+      const color = findPointOnTrasferFunction(it, customTransferFunction)
+
+      data[i] = 2 * color.r // Red
+      data[i + 1] = color.g // Green
+      data[i + 2] = 3 * color.b // Blue
+      data[i + 3] = color.a // Alpha
+      // data[i] = 2 * it * color.r // Red
+      // data[i + 1] = it * color.g // Green
+      // data[i + 2] = 3 * it * color.b // Blue
+      // data[i + 3] = it // Alpha
+
+      // console.log(color)
+      // console.log(it)
+      // console.log(it + ' vs ' + threshold * 255)
+
+      // console.log(it)
+
+      // if (it < threshold * 255) {
+      //   data[i] = 0 // Red
+      //   data[i + 1] = 0 // Green
+      //   data[i + 2] = 0 // Blue
+      //   data[i + 3] = 0 // Alpha
+      // } else {
+      //   data[i] = 2 * it * red // Red
+      //   data[i + 1] = it * green // Green
+      //   data[i + 2] = 3 * it * blue // Blue
+      //   data[i + 3] = it // Alpha
+      // }
+    }
   }
 
   // TRANSFER FUNCTION, Too bad!!
@@ -497,31 +586,31 @@ function updateTransferFunction (gl, transferFunction) {
   //   data[i + 3] = it;
   // }
 
-  const opacity = Number(document.getElementById('transfer-opacity').value) / 100
-  const red = Number(document.getElementById('transfer-red').value) / 100
-  const green = Number(document.getElementById('transfer-green').value) / 100
-  const blue = Number(document.getElementById('transfer-blue').value) / 100
-  const threshold = Number(document.getElementById('transfer-threshold').value) / 100
+  // const opacity = Number(document.getElementById('transfer-opacity').value) / 100
+  // const red = Number(document.getElementById('transfer-red').value) / 100
+  // const green = Number(document.getElementById('transfer-green').value) / 100
+  // const blue = Number(document.getElementById('transfer-blue').value) / 100
+  // const threshold = Number(document.getElementById('transfer-threshold').value) / 100
 
-  console.log(opacity)
+  // console.log(opacity)
 
-  for (let i = cutoff * 4; i < 256 * 4; i += 4) {
-    // convert i into a value [0, 256] and set it
-    const it = i * opacity / 4
-    // console.log(it)
-    // console.log(it + ' vs ' + threshold * 255)
-    if (it / opacity < threshold * 255) {
-      data[i] = 0 // Red
-      data[i + 1] = 0 // Green
-      data[i + 2] = 0 // Blue
-      data[i + 3] = 0 // Alpha
-    } else {
-      data[i] = 2 * it * red // Red
-      data[i + 1] = it * green // Green
-      data[i + 2] = 3 * it * blue // Blue
-      data[i + 3] = it // Alpha
-    }
-  }
+  // for (let i = cutoff * 4; i < 256 * 4; i += 4) {
+  //   // convert i into a value [0, 256] and set it
+  //   const it = i * opacity / 4
+  //   // console.log(it)
+  //   // console.log(it + ' vs ' + threshold * 255)
+  //   if (it / opacity < threshold * 255) {
+  //     data[i] = 0 // Red
+  //     data[i + 1] = 0 // Green
+  //     data[i + 2] = 0 // Blue
+  //     data[i + 3] = 0 // Alpha
+  //   } else {
+  //     data[i] = 2 * it * red // Red
+  //     data[i + 1] = it * green // Green
+  //     data[i + 2] = 3 * it * blue // Blue
+  //     data[i + 3] = it // Alpha
+  //   }
+  // }
 
   /// End of the provided transfer function
   /// /////////////////////////////////////////////////////////////////////////////////////

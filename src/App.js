@@ -47,7 +47,7 @@ function App () {
       <div className='controls'>
         <div>
           Rendering parameters
-          <div>Step size: <input type='range' min='10' max='10000' value={1000} className='slider' id='stepSize' onInput={(val) => updateControls(val, 'stepSize')} /> </div>
+          <div>Step size: <input type='range' min='10' max='10000' value={settings.stepSize} className='slider' id='stepSize' onInput={(val) => updateControls(val, 'stepSize')} /> </div>
           <div>
             <div>Compositing method:</div>
             <label><input type='radio' name='compositing' value={settings.frontToBack} onChange={(val) => updateControls(val, 'frontToBack')} checked />Front-to-back</label>
