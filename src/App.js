@@ -62,15 +62,6 @@ function App () {
           <label> theta: <input type='range' min='1' max='180' value={settings.cameraTheta} className='slider' id='camera-theta' onInput={(val) => updateControls(val, 'cameraTheta')} /></label>
         </div>
         <div>
-          Transferfunction (very clean)
-          <div>Transferfunction output:</div>
-          <div> Opacity: <input type='range' min='0' max='100' value={settings.transferOpacity} className='slider' id='transfer-opacity' onInput={updateTransferAndRender} /></div>
-          <div> Red: <input type='range' min='0' max='100' value={setSettings.transferRed} className='slider' id='transfer-red' onInput={updateTransferAndRender} /></div>
-          <div> Green: <input type='range' min='0' max='100' value={settings.transferGreen} className='slider' id='transfer-green' onInput={updateTransferAndRender} /></div>
-          <div> Blue: <input type='range' min='0' max='100' value={settings.transferBlue} className='slider' id='transfer-blue' onInput={updateTransferAndRender} /></div>
-          <div> Threshold: <input type='range' min='0' max='100' value={settings.transferThreshold} className='slider' id='transfer-threshold' onInput={updateTransferAndRender} /></div>
-        </div>
-        <div>
           Debugging
           <div>Rendering output:</div>
           <label><input type='radio' name='debug-output' value={settings.volume} onChange={(val) => updateControls(val, 'volume')} checked />Volume Rendering</label>

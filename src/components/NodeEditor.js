@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { ChromePicker } from 'react-color'
 import styled from 'styled-components'
 import { v4 as uuidv4 } from 'uuid'
-import { updateTransferAndRender } from '../scivis'
+import { updateTransferAndRender, getDensities } from '../scivis'
 import { rgbObjToRgbString } from '../lib/utils'
 
 const Container = styled.div`
@@ -45,11 +45,54 @@ const getRelativeCoordinates = (event) => {
 
 let initiated = false
 
+export const setDensities = (densities) => {
+  console.log(densities)
+}
+
+const fetchDensities = async () => {
+  let response
+  try {
+    response = await window.fetch('pig.raw')
+  } catch (error) {
+    // Something went wrong, so we have to bail
+    window.alert("Error accessing volume 'pig.raw': " + error)
+    return
+  }
+  if (!response.ok) {
+    // The fetch request didn't fail catastrophically, but it still didn't succeed
+    window.alert("Error accessing volume 'pig.raw'")
+    return
+  }
+  const blob = await response.blob()
+  // Convert it into an array buffer
+  console.log(112, 'Cast the blob into an array buffer')
+  const data = await blob.arrayBuffer()
+  // From the available meta data for the pig.raw dataset I know that each voxel is
+  // 16 bit unsigned integer
+  console.log(113, 'Cast the array buffer into a Uint16 typed array')
+  const typedData = new Uint16Array(data)
+  // Our volume renderer really likes 8 bit data, so let's convert it
+  console.log(114, 'Convert the array into a Uint8 array')
+  // const convertedData = new Uint8Array(typedData.length)
+  const convertedData = new Uint8Array(512 * 512 * 134)
+  for (let i = 0; i < typedData.length; i++) {
+    // The range of the dataset is [0, 4096), so we need to convert that into
+    // [0, 256) manually
+    convertedData[i] = typedData[i] / 4096.0 * 256.0
+  }
+
+  // console.log(convertedData)
+
+  const densities = convertedData.filter(data => data > 3)
+  return densities
+}
+
 function NodeEditor ({ width = 300, height = 300 }) {
   const [nodes, setNodes] = useState([createNode(0, height), createNode(width, 0)])
   const [currentlyMoving, setCurrentlyMoving] = useState(null)
   const [selected, setSelected] = useState(null)
   const [currentColor, setCurrentColor] = useState('#fff')
+  const [histogram, setHistogram] = useState(['0 0'])
 
   const points = React.useMemo(() => {
     if (nodes == null) return []
@@ -119,18 +162,37 @@ function NodeEditor ({ width = 300, height = 300 }) {
     setCurrentColor(color)
   }
 
+  const updateRender = () => {
+    const mappedNodes = nodes.map(node => {
+      return { ...node, x: node.x / width, y: Math.abs(1 - node.y / height) }
+    })
+
+    updateTransferAndRender(mappedNodes)
+  }
+
   useEffect(() => {
     initiated = true
+    updateRender()
+
+    const fetchData = async () => {
+      const densities = await fetchDensities()
+      const coordinates = new Array(256).fill(0)
+      let max = 0
+      for (const density of densities) {
+        coordinates[density]++
+        max = coordinates[density] > max ? coordinates[density] : max
+      }
+      const coordinatestring = coordinates.map((coordinate, i) => i / 255 * width + ' ' + Math.abs(1 - coordinate / max) * height)
+      coordinatestring.push('300 300')
+      coordinatestring.push('0 300')
+      setHistogram(coordinatestring)
+    }
+    fetchData()
   }, [])
 
   useMemo(() => {
     if (initiated) {
-      const mappedNodes = nodes.map(node => {
-        return { ...node, x: node.x / width, y: Math.abs(1 - node.y / height) }
-      })
-
-      // console.log(mappedNodes)
-      updateTransferAndRender(mappedNodes)
+      updateRender()
     }
   }, [nodes])
 
@@ -139,8 +201,10 @@ function NodeEditor ({ width = 300, height = 300 }) {
 
       <Editor id='mySVG' width={width + editorPadding * 2} height={height + editorPadding * 2} onMouseDown={mouseDown} onMouseUp={mouseRelease} onMouseMove={mouseMove} onMouseLeave={mouseRelease}>
         <g transform={'translate(' + editorPadding + ' ' + editorPadding + ')'}>
+          <polyline strokeWidth={1} stroke='none' fill='rgb(168, 190, 255, 0.4)' points={histogram.join(' ')} />
           <text fontSize='12' fontWeight='bolder' x={0} y={0}>Piggy Editor</text>
           <polyline fill='none' strokeWidth={1} stroke='black' points={points.join(' ')} />
+
           {nodes.map((node) => <circle onMouseDown={(e) => circleMouseDown(e, node)} key={node.id} cx={node.x} cy={node.y} fill={rgbObjToRgbString(node.color)} stroke={node.id === selected ? 'black' : 'none'} strokeWidth={2} r={8} />)}
         </g>
       </Editor>

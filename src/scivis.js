@@ -1,6 +1,7 @@
 import { mat4 } from 'gl-matrix'
 import interpolate from 'color-interpolate'
 import { rgbObjToRgbString, rgbStringToObj } from './lib/utils'
+import { setDensities } from './components/NodeEditor'
 
 //
 //   Space for some global variables
@@ -458,19 +459,12 @@ const precision = (num) => {
 }
 
 const findPointOnTrasferFunction = (it, nodes) => {
-  // it = 0.5
-  // console.log(it)
   // Dirty talk
   let startNode = null
   let endNode = null
 
   let index = 0
   while (!endNode) {
-    // console.log(index)
-    // console.log(nodes)
-
-    // console.log(nodes[index].x)
-    // console.log(precision(it)) // maybe precision?
     if (nodes[index].x >= it) {
       endNode = nodes[index]
       startNode = nodes[index - 1] // makes sense
@@ -482,7 +476,7 @@ const findPointOnTrasferFunction = (it, nodes) => {
   const v = -Math.atan((endNode.y - startNode.y) / (endNode.x - startNode.x))
   const dx = (it - startNode.x)
   // cos(v) * dx = hypothenus
-  const hypothenus = dx / Math.sin(v) // WRONG
+  const hypothenus = dx / Math.sin(v)
   // sin(v) * dy = hypothenus
   const dy = hypothenus * Math.sin(v)
 
@@ -496,7 +490,6 @@ const findPointOnTrasferFunction = (it, nodes) => {
   const opacity = (dy + startNode.y > 1) ? 1 : dy + startNode.y
 
   colorObj.a = opacity
-  console.log(dy + startNode.y)
 
   return colorObj
 }
@@ -538,6 +531,9 @@ function updateTransferFunction (gl, transferFunction) {
     data[i + 3] = 0
   }
 
+  // @TODO:  Replace the transfer function specification above with your own transfer
+  //         function editor result
+
   if (customTransferFunction) {
     for (let i = cutoff * 4; i < 256 * 4; i += 4) {
       // convert i into a value [0, 256] and set it
@@ -548,75 +544,8 @@ function updateTransferFunction (gl, transferFunction) {
       data[i + 1] = color.g // Green
       data[i + 2] = 3 * color.b // Blue
       data[i + 3] = color.a // Alpha
-      // data[i] = 2 * it * color.r // Red
-      // data[i + 1] = it * color.g // Green
-      // data[i + 2] = 3 * it * color.b // Blue
-      // data[i + 3] = it // Alpha
-
-      // console.log(color)
-      // console.log(it)
-      // console.log(it + ' vs ' + threshold * 255)
-
-      // console.log(it)
-
-      // if (it < threshold * 255) {
-      //   data[i] = 0 // Red
-      //   data[i + 1] = 0 // Green
-      //   data[i + 2] = 0 // Blue
-      //   data[i + 3] = 0 // Alpha
-      // } else {
-      //   data[i] = 2 * it * red // Red
-      //   data[i + 1] = it * green // Green
-      //   data[i + 2] = 3 * it * blue // Blue
-      //   data[i + 3] = it // Alpha
-      // }
     }
   }
-
-  // TRANSFER FUNCTION, Too bad!!
-
-  // For now, just create a linear ramp from 0 to 1. We start at the cutoff value and fill
-  // the rest of the array
-  // for (let i = cutoff * 4; i < 256 * 4; i += 4) {
-  //   // convert i into a value [0, 256] and set it
-  //   const it = i / 4;
-  //   data[i] = 2 * it;
-  //   data[i + 1] = it;
-  //   data[i + 2] = 3 * it;
-  //   data[i + 3] = it;
-  // }
-
-  // const opacity = Number(document.getElementById('transfer-opacity').value) / 100
-  // const red = Number(document.getElementById('transfer-red').value) / 100
-  // const green = Number(document.getElementById('transfer-green').value) / 100
-  // const blue = Number(document.getElementById('transfer-blue').value) / 100
-  // const threshold = Number(document.getElementById('transfer-threshold').value) / 100
-
-  // console.log(opacity)
-
-  // for (let i = cutoff * 4; i < 256 * 4; i += 4) {
-  //   // convert i into a value [0, 256] and set it
-  //   const it = i * opacity / 4
-  //   // console.log(it)
-  //   // console.log(it + ' vs ' + threshold * 255)
-  //   if (it / opacity < threshold * 255) {
-  //     data[i] = 0 // Red
-  //     data[i + 1] = 0 // Green
-  //     data[i + 2] = 0 // Blue
-  //     data[i + 3] = 0 // Alpha
-  //   } else {
-  //     data[i] = 2 * it * red // Red
-  //     data[i + 1] = it * green // Green
-  //     data[i + 2] = 3 * it * blue // Blue
-  //     data[i + 3] = it // Alpha
-  //   }
-  // }
-
-  /// End of the provided transfer function
-  /// /////////////////////////////////////////////////////////////////////////////////////
-
-  // @TODO:  Replace the transfer function specification above with your own transfer
-  //         function editor result
 
   // Upload the new data to the texture
   console.log(117, 'Updating the transfer function texture')
