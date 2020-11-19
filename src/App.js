@@ -14,16 +14,8 @@ function App () {
     transferGreen: 100,
     transferBlue: 100,
     transferThreshold: 0,
-    frontToBack: 'ftb',
-    firstHitPoint: 'fhp',
-    maxIntensityProj: 'mip',
-    volume: 'volume',
-    entry: 'entry',
-    exit: 'exit',
-    transfer: 'transfer',
-    direction: 'direction',
-    slice: 'slice',
-    transferSlice: 'slice-transfer'
+    selectedCompositing: 'ftb',
+    selectedRendering: 'volume'
   })
 
   useEffect(() => {
@@ -40,6 +32,17 @@ function App () {
     triggerRendering()
   }
 
+  const compositingRadio = (value) => {
+    setSettings({ ...settings, selectedCompositing: value })
+    triggerRendering()
+  }
+
+  const renderingRadio = (value) => {
+    console.log(value)
+    setSettings({ ...settings, selectedRendering: value })
+    triggerRendering()
+  }
+
   return (
     <div className='App'>
       <p id='error' />
@@ -50,9 +53,9 @@ function App () {
           <div>Step size: <input type='range' min='10' max='10000' value={settings.stepSize} className='slider' id='stepSize' onInput={(val) => updateControls(val, 'stepSize')} /> </div>
           <div>
             <div>Compositing method:</div>
-            <label><input type='radio' name='compositing' value={settings.frontToBack} onChange={(val) => updateControls(val, 'frontToBack')} checked />Front-to-back</label>
-            <label><input type='radio' name='compositing' value={settings.firstHitPoint} onChange={(val) => updateControls(val, 'firstHitPoint')} />First hit-point</label>
-            <label><input type='radio' name='compositing' value={settings.maxIntensityProj} onChange={(val) => updateControls(val, 'maxIntensityProj')} />Maximum-intensity projection</label>
+            <label><input type='radio' name='compositing' value='ftb' onChange={() => compositingRadio('ftb')} checked={settings.selectedCompositing === 'ftb'} />Front-to-back</label>
+            <label><input type='radio' name='compositing' value='fhp' onChange={() => compositingRadio('fhp')} checked={settings.selectedCompositing === 'fhp'} />First hit-point</label>
+            <label><input type='radio' name='compositing' value='mip' onChange={() => compositingRadio('mip')} checked={settings.selectedCompositing === 'mip'} />Maximum-intensity projection</label>
           </div>
         </div>
         <div>
@@ -64,13 +67,13 @@ function App () {
         <div>
           Debugging
           <div>Rendering output:</div>
-          <label><input type='radio' name='debug-output' value={settings.volume} onChange={(val) => updateControls(val, 'volume')} checked />Volume Rendering</label>
-          <label><input type='radio' name='debug-output' value={settings.entry} onChange={(val) => updateControls(val, 'frontToBack')} />Entry Points</label>
-          <label><input type='radio' name='debug-output' value={settings.exit} onChange={(val) => updateControls(val, 'exit')} />Exit Points</label>
-          <label><input type='radio' name='debug-output' value={settings.direction} onChange={(val) => updateControls(val, 'direction')} />Ray direction</label>
-          <label><input type='radio' name='debug-output' value={settings.transfer} onChange={(val) => updateControls(val, 'transfer')} />Transfer Function</label>
-          <label><input type='radio' name='debug-output' value={settings.slice} onChange={(val) => updateControls(val, 'slice')} />Volume Slice</label>
-          <label><input type='radio' name='debug-output' value={settings.transferSlice} onChange={(val) => updateControls(val, 'transferSlice')} />Volume Slice with transfer function</label>
+          <label><input type='radio' name='debug-output' value='volume' onChange={() => renderingRadio('volume')} checked={settings.selectedRendering === 'volume'} />Volume Rendering</label>
+          <label><input type='radio' name='debug-output' value='entry' onChange={() => renderingRadio('entry')} checked={settings.selectedRendering === 'entry'} />Entry Points</label>
+          <label><input type='radio' name='debug-output' value='exit' onChange={() => renderingRadio('exit')} checked={settings.selectedRendering === 'exit'} />Exit Points</label>
+          <label><input type='radio' name='debug-output' value='direction' onChange={() => renderingRadio('direction')} checked={settings.selectedRendering === 'direction'} />Ray direction</label>
+          <label><input type='radio' name='debug-output' value='transfer' onChange={() => renderingRadio('transfer')} checked={settings.selectedRendering === 'transfer'} />Transfer Function</label>
+          <label><input type='radio' name='debug-output' value='slice' onChange={() => renderingRadio('slice')} checked={settings.selectedRendering === 'slice'} />Volume Slice</label>
+          <label><input type='radio' name='debug-output' value='transferSlice' onChange={() => renderingRadio('transferSlice')} checked={settings.selectedRendering === 'transferSlice'} />Volume Slice with transfer function</label>
         </div>
 
         <NodeEditor />
