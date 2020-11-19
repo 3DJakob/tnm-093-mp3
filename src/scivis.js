@@ -239,7 +239,7 @@ const volumeRenderingFragmentSource = `#version 300 es
     // reaching the end of the ray (t >= tEnd) or if our resulting color is so saturated
     // (result.a >= 0.99) that any other samples that would follow would have so little
     // impact as to make the computation unnecessary (called early ray termination)
-    bool firstBounce = true;
+
     while (t < tEnd && result.a < 0.99) {
       // Compute the current sampling position along the ray
       vec3 sampleCoord = entryCoord + t * rayDirection;
@@ -271,7 +271,22 @@ const volumeRenderingFragmentSource = `#version 300 es
           //
           //   @TODO: Implement the front-to-back compositing here
           //
-          result = result + color;
+          //result = result + color;
+
+          // C'i = res
+          // A'i = res.a
+          // C'i = (1 - A’i-1) * Ci * Ai + C'i-1
+          // A'i = (1 - A'i-1) * Ai + A'i-1
+          const highp float one = 1.0;
+          // if (result.a < one) {
+            // C'i
+            result.rgb = (1.0 - result.a) * color.rgb * color.a + result.rgb;
+
+            // A'i
+            result.a = (1.0 - result.a) * color.a + result.a;
+          // } else {
+            // result.a = 1.0;
+          // }
 
 
 
@@ -281,13 +296,8 @@ const volumeRenderingFragmentSource = `#version 300 es
           //
           //   @TODO: Implement the first hitpoint compositing here
           //
-          if (firstBounce) {
-            result = color;
-            firstBounce = false;
-          }
-
-
-
+          result = color;
+          result.a = 1.0;
 
 
         }
@@ -307,6 +317,12 @@ const volumeRenderingFragmentSource = `#version 300 es
       // Step further along the ray
       t += tIncr;
     }
+
+    // if (compositingMethod != CompositingMethodFrontToBack) {
+    //   for (int i = 0; i < 254; i++) {
+    //     result = result + result;
+    //   }
+    // }
 
     // If we get here, the while loop above terminated, so we are done with the ray, so
     // we can return the result
@@ -489,7 +505,9 @@ const findPointOnTrasferFunction = (it, nodes) => {
 
   const opacity = (dy + startNode.y > 1) ? 1 : dy + startNode.y
 
-  colorObj.a = opacity
+  // console.log(colorObj)
+  colorObj.a = opacity * 255
+  // console.log(opacity)
 
   return colorObj
 }
